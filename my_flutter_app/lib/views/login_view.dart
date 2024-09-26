@@ -1,8 +1,7 @@
-import 'dart:developer' as devtools show log;
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:my_flutter_app/constants/routes.dart';
+import 'package:my_flutter_app/utilities/show_error_dialog.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({Key? key}) : super(key: key);
@@ -36,7 +35,7 @@ class _LoginViewState extends State<LoginView> {
         title: const Text(
           'Login',
           style: TextStyle(
-            color: Colors.white, // Set the text color to white
+            color: Colors.white,
           ),
         ),
         backgroundColor: Colors.blue,
@@ -59,7 +58,7 @@ class _LoginViewState extends State<LoginView> {
             enableSuggestions: false,
             autocorrect: false,
             decoration: const InputDecoration(
-              hintText: ' Password',
+              hintText: 'Password',
             ),
           ),
           TextButton(
@@ -71,31 +70,55 @@ class _LoginViewState extends State<LoginView> {
                   email: email,
                   password: password,
                 );
+                if (!context.mounted) return; // Ensure widget is still mounted
                 Navigator.of(context).pushNamedAndRemoveUntil(
                   notesRoute,
                   (route) => false,
                 );
               } on FirebaseAuthException catch (e) {
+                if (!context.mounted) return;
                 if (e.code == 'user-not-found') {
-                  devtools.log('User not found');
+                  await showErrorDialog(
+                    context,
+                    'No user found for that email. Please register first.',
+                  );
                 } else if (e.code == 'wrong-password') {
-                  devtools.log('Wrong password');
+                  if (!context.mounted) return;
+                  await showErrorDialog(
+                    context,
+                    'Incorrect password. Please try again.',
+                  );
+                } else {
+                  // Handle other Firebase exceptions if necessary
+                  await showErrorDialog(
+                    context,
+                    'Authentication error: ${e.code}',
+                  );
                 }
+              } catch (e) {
+                // Handle non-Firebase exceptions
+                await showErrorDialog(
+                  context,
+                  'An error occurred. Please try again later.',
+                );
               }
             },
             child: const Text('Login'),
           ),
           TextButton(
             onPressed: () {
+              if (!mounted) return; // Ensure widget is still mounted
               Navigator.of(context).pushNamedAndRemoveUntil(
                 registerRoute,
                 (route) => false,
               );
             },
             child: const Text('Not registered yet? Register here!'),
-          )
+          ),
         ],
       ),
     );
   }
 }
+
+
