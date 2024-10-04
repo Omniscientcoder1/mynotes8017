@@ -70,11 +70,26 @@ class _LoginViewState extends State<LoginView> {
                   email: email,
                   password: password,
                 );
-                if (!context.mounted) return; // Ensure widget is still mounted
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  notesRoute,
-                  (route) => false,
-                );
+                final user = FirebaseAuth.instance.currentUser;
+                if (user?.emailVerified ?? false) {
+                  //User's email is verified
+                  if (!context.mounted) {
+                    return; // Ensure widget is still mounted
+                  }
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    notesRoute,
+                    (route) => false,
+                  );
+                } else {
+                  //user's email is not verified
+                  if (!context.mounted) {
+                    return; // Ensure widget is still mounted
+                  }
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    verifyEmailRoute,
+                    (route) => false,
+                  );
+                }
               } on FirebaseAuthException catch (e) {
                 if (!context.mounted) return;
                 if (e.code == 'user-not-found') {
@@ -120,5 +135,3 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 }
-
-
