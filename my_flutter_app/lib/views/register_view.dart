@@ -1,6 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:my_flutter_app/constants/routes.dart';
+import 'package:my_flutter_app/services/auth/auth_exceptions.dart';
+import 'package:my_flutter_app/services/auth/auth_service.dart';
 import 'package:my_flutter_app/utilities/show_error_dialog.dart';
 
 class RegisterView extends StatefulWidget {
@@ -28,6 +29,38 @@ class _RegisterViewState extends State<RegisterView> {
     super.dispose();
   }
 
+  Future<void> _register() async {
+    final email = _email.text;
+    final password = _password.text;
+
+    try {
+      // Call createUser method in AuthService
+      await AuthService.firebase().createUser(
+        email: email,
+        password: password,
+      );
+      // Call sendEmailVerification method in AuthService
+      await AuthService.firebase().sendEmailVerification();
+
+      if (!mounted)
+        return; // Ensure the widget is still mounted before navigation
+
+      Navigator.of(context).pushNamed(verifyEmailRoute);
+    } on WeakPasswordAuthException {
+      if (!mounted) return;
+      await showErrorDialog(context, 'Weak Password');
+    } on EmailAlreadyInUseAuthException {
+      if (!mounted) return;
+      await showErrorDialog(context, 'Email already in use');
+    } on InvalidEmailAuthException {
+      if (!mounted) return;
+      await showErrorDialog(context, 'Invalid email');
+    } on GenericAuthException {
+      if (!mounted) return;
+      await showErrorDialog(context, 'Failed to Register');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,7 +68,7 @@ class _RegisterViewState extends State<RegisterView> {
         title: const Text(
           'Register',
           style: TextStyle(
-            color: Colors.white, // Set the text color to white
+            color: Colors.white,
           ),
         ),
         backgroundColor: Colors.blue,
@@ -58,61 +91,23 @@ class _RegisterViewState extends State<RegisterView> {
             enableSuggestions: false,
             autocorrect: false,
             decoration: const InputDecoration(
-              hintText: ' Password',
+              hintText: 'Password',
             ),
           ),
           TextButton(
-            onPressed: () async {
-              final email = _email.text;
-              final password = _password.text;
-              try {
-                await FirebaseAuth.instance.createUserWithEmailAndPassword(
-                  email: email,
-                  password: password,
-                );
-                final user = FirebaseAuth.instance.currentUser;
-                await user?.sendEmailVerification();
-                Navigator.of(context).pushNamed(verifyEmailRoute);
-              } on FirebaseAuthException catch (e) {
-                if (e.code == 'weak-password') {
-                  await showErrorDialog(
-                    context,
-                    'Weak Password',
-                  );
-                } else if (e.code == 'email-already-in-use') {
-                  await showErrorDialog(
-                    context,
-                    'email already in use',
-                  );
-                } else if (e.code == 'invalid-email') {
-                  await showErrorDialog(
-                    context,
-                    'invalid email',
-                  );
-                } else {
-                  await showErrorDialog(
-                    context,
-                    'Error ${e.code}',
-                  );
-                }
-              } catch (e) {
-                await showErrorDialog(
-                  context,
-                  e.toString(),
-                );
-              }
-            },
+            onPressed: _register,
             child: const Text('Register'),
           ),
           TextButton(
             onPressed: () {
+              if (!mounted) return;
               Navigator.of(context).pushNamedAndRemoveUntil(
                 loginRoute,
                 (route) => false,
               );
             },
             child: const Text('Already Registered? Login here'),
-          )
+          ),
         ],
       ),
     );

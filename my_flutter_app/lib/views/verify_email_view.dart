@@ -1,53 +1,36 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:my_flutter_app/constants/routes.dart';
+import 'package:my_flutter_app/services/auth/auth_service.dart';
 
-class VerifyEmailView extends StatefulWidget {
+class VerifyEmailView extends StatelessWidget {
   const VerifyEmailView({Key? key}) : super(key: key);
 
-  @override
-  State<VerifyEmailView> createState() => _VerifyEmailViewState();
-}
-
-class _VerifyEmailViewState extends State<VerifyEmailView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Verify email',
-          style: TextStyle(
-            color: Colors.white, // Set the text color to white
-          ),
-        ),
-        backgroundColor: Colors.blue,
-        elevation: 4.0,
+        title: const Text('Verify Email'),
       ),
       body: Column(
         children: [
-          const Text(
-            "We've sent a verification email. please click the link in the email to verify your account.",
-          ),
-          const Text(
-            "If you havent received an email, select this button:",
-          ),
+          const Text('We have sent a verification email to your account.'),
           TextButton(
             onPressed: () async {
-              final user = FirebaseAuth.instance.currentUser;
-              await user?.sendEmailVerification();
+              await AuthService.firebase().sendEmailVerification();
             },
-            child: const Text('Send Email Verification'),
+            child: const Text('Resend Verification Email'),
           ),
           TextButton(
             onPressed: () async {
-              await FirebaseAuth.instance.signOut();
+              await AuthService.firebase().logout();
+
               Navigator.of(context).pushNamedAndRemoveUntil(
                 registerRoute,
-                (route) => false,
+                (_) => false,
               );
             },
-            child: const Text('Restart'),
-          )
+            child: const Text('Go back to register'),
+          ),
         ],
       ),
     );

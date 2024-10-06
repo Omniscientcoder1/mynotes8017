@@ -1,6 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:my_flutter_app/constants/routes.dart';
+import 'package:my_flutter_app/services/auth/auth_exceptions.dart';
+import 'package:my_flutter_app/services/auth/auth_service.dart';
 import 'package:my_flutter_app/utilities/show_error_dialog.dart';
 
 class LoginView extends StatefulWidget {
@@ -26,6 +27,51 @@ class _LoginViewState extends State<LoginView> {
     _email.dispose();
     _password.dispose();
     super.dispose();
+  }
+
+  Future<void> _login() async {
+    final email = _email.text;
+    final password = _password.text;
+    try {
+      await AuthService.firebase().login(
+        email: email,
+        password: password,
+      );
+      final user = AuthService.firebase().currentUser;
+      if (user?.isEmailVerified ?? false) {
+        // User's email is verified
+        if (!mounted) return; // Ensure widget is still mounted
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          notesRoute,
+          (route) => false,
+        );
+      } else {
+        // User's email is not verified
+        if (!mounted) return; // Ensure widget is still mounted
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          verifyEmailRoute,
+          (route) => false,
+        );
+      }
+    } on UserNotFoundAuthException {
+      if (!mounted) return;
+      await showErrorDialog(
+        context,
+        'No user found for that email. Please register first.',
+      );
+    } on WrongPasswordAuthException {
+      if (!mounted) return;
+      await showErrorDialog(
+        context,
+        'Incorrect password. Please try again.',
+      );
+    } on GenericAuthException {
+      if (!mounted) return;
+      await showErrorDialog(
+        context,
+        'Authentication error',
+      );
+    }
   }
 
   @override
@@ -62,52 +108,12 @@ class _LoginViewState extends State<LoginView> {
             ),
           ),
           TextButton(
-            onPressed: () async {
-              final email = _email.text;
-              final password = _password.text;
-              try {
-                await FirebaseAuth.instance.signInWithEmailAndPassword(
-                  email: email,
-                  password: password,
-                );
-                if (!context.mounted) return; // Ensure widget is still mounted
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  notesRoute,
-                  (route) => false,
-                );
-              } on FirebaseAuthException catch (e) {
-                if (!context.mounted) return;
-                if (e.code == 'user-not-found') {
-                  await showErrorDialog(
-                    context,
-                    'No user found for that email. Please register first.',
-                  );
-                } else if (e.code == 'wrong-password') {
-                  if (!context.mounted) return;
-                  await showErrorDialog(
-                    context,
-                    'Incorrect password. Please try again.',
-                  );
-                } else {
-                  // Handle other Firebase exceptions if necessary
-                  await showErrorDialog(
-                    context,
-                    'Authentication error: ${e.code}',
-                  );
-                }
-              } catch (e) {
-                // Handle non-Firebase exceptions
-                await showErrorDialog(
-                  context,
-                  'An error occurred. Please try again later.',
-                );
-              }
-            },
+            onPressed: _login,
             child: const Text('Login'),
           ),
           TextButton(
             onPressed: () {
-              if (!mounted) return; // Ensure widget is still mounted
+              if (!mounted) return;
               Navigator.of(context).pushNamedAndRemoveUntil(
                 registerRoute,
                 (route) => false,
@@ -120,5 +126,3 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 }
-
-
